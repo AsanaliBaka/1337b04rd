@@ -1,27 +1,29 @@
 package domain
 
 import (
+	. "1337b04rd/pkg"
 	"time"
 )
 
 type Post struct {
-	ID         string //id поста
+	ID         string
 	Title      string
 	Content    string
 	ImageURL   string
 	Author     UserRef
 	CreatedAt  time.Time
-	Expires    time.Time
+	UpdatedAt  time.Time
 	IsArchived bool
 }
 
 func NewPost(title, content string, author UserRef) *Post {
+
 	return &Post{
-		ID:        generatedId(),
+		ID:        GeneratedId()(),
 		Title:     title,
 		Content:   content,
 		Author:    author,
 		CreatedAt: time.Now(),
-		Expires:   time.Now().Add(10 * time.Minute),
+		UpdatedAt: time.Now().Add(10 * time.Minute),
 	}
 }
