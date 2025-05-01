@@ -83,10 +83,12 @@ func (p *postRepo) GetAllPost(ctx context.Context) ([]*domain.Post, error) {
 	}
 	return items, nil
 }
+
 func (p *postRepo) UpdatePost(ctx context.Context, post *domain.Post) error {
 	//Erkanat do that
 	return nil
 }
+
 func (p *postRepo) DeletePost(ctx context.Context, id string) error {
 	_, err := p.db.Exec(ctx, qDeletePost, id)
 
@@ -96,3 +98,4 @@ func (p *postRepo) DeletePost(ctx context.Context, id string) error {
 
 	return nil
 }
+
