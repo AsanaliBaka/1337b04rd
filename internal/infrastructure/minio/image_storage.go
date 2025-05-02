@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -15,6 +16,8 @@ type imageStorage struct {
 	client     *minio.Client
 	bucketName string
 }
+
+const ImageURLExpiration = 7 * 24 * time.Hour
 
 func NewImageStrorage(cfg *config.Config, ctx context.Context) (ImageStorage, error) {
 	client, err := minio.New(cfg.MinioEndPoint, &minio.Options{

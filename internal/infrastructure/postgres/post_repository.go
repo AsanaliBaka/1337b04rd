@@ -3,6 +3,8 @@ package postgres
 import (
 	"1337b04rd/internal/domain"
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -36,7 +38,7 @@ func (p *postRepo) CreatePost(ctx context.Context, post *domain.Post) error {
 	return nil
 }
 func (p *postRepo) GetByIDPost(ctx context.Context, id string) (*domain.Post, error) {
-	var item *domain.Post
+	var item domain.Post
 
 	err := p.db.QueryRow(ctx, qGetByIDPost, id).Scan(
 		&item.ID,
@@ -53,16 +55,17 @@ func (p *postRepo) GetByIDPost(ctx context.Context, id string) (*domain.Post, er
 		return nil, err
 	}
 
-	return item, nil
+	return &item, nil
 }
 func (p *postRepo) GetAllPost(ctx context.Context) ([]*domain.Post, error) {
-	var items []*domain.Post
 	rows, err := p.db.Query(ctx, qGetAllPost)
 
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+
+	var items []*domain.Post
 
 	for rows.Next() {
 		var item domain.Post
@@ -83,9 +86,12 @@ func (p *postRepo) GetAllPost(ctx context.Context) ([]*domain.Post, error) {
 	}
 	return items, nil
 }
+func (p *postRepo) UpdatePost(ctx context.Context, postId string, isArchive bool, upadtedAt time.Time) error {
+	_, err := p.db.Exec(ctx, qUpdatePost, upadtedAt, isArchive, postId)
 
-func (p *postRepo) UpdatePost(ctx context.Context, post *domain.Post) error {
-	//Erkanat do that
+	if err != nil {
+		return fmt.Errorf("failed to update post %s: %w", postId, err)
+	}
 	return nil
 }
 
