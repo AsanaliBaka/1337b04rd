@@ -1,10 +1,11 @@
 package postgres
 
 import (
-	"1337b04rd/internal/domain"
 	"context"
 	"fmt"
 	"time"
+
+	"1337b04rd/internal/domain"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -30,13 +31,13 @@ func (p *postRepo) CreatePost(ctx context.Context, post *domain.Post) error {
 		post.UpdatedAt,
 		post.IsArchived,
 	)
-
 	if err != nil {
 		return err
 	}
 
 	return nil
 }
+
 func (p *postRepo) GetByIDPost(ctx context.Context, id string) (*domain.Post, error) {
 	var item domain.Post
 
@@ -50,16 +51,15 @@ func (p *postRepo) GetByIDPost(ctx context.Context, id string) (*domain.Post, er
 		&item.UpdatedAt,
 		&item.IsArchived,
 	)
-
 	if err != nil {
 		return nil, err
 	}
 
 	return &item, nil
 }
+
 func (p *postRepo) GetAllPost(ctx context.Context) ([]*domain.Post, error) {
 	rows, err := p.db.Query(ctx, qGetAllPost)
-
 	if err != nil {
 		return nil, err
 	}
@@ -86,9 +86,9 @@ func (p *postRepo) GetAllPost(ctx context.Context) ([]*domain.Post, error) {
 	}
 	return items, nil
 }
+
 func (p *postRepo) UpdatePost(ctx context.Context, postId string, isArchive bool, upadtedAt time.Time) error {
 	_, err := p.db.Exec(ctx, qUpdatePost, upadtedAt, isArchive, postId)
-
 	if err != nil {
 		return fmt.Errorf("failed to update post %s: %w", postId, err)
 	}
@@ -97,11 +97,9 @@ func (p *postRepo) UpdatePost(ctx context.Context, postId string, isArchive bool
 
 func (p *postRepo) DeletePost(ctx context.Context, id string) error {
 	_, err := p.db.Exec(ctx, qDeletePost, id)
-
 	if err != nil {
 		return err
 	}
 
 	return nil
 }
-

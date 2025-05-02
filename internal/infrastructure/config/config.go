@@ -55,6 +55,7 @@ func validateConfig(cfg *Config) error {
 
 	return nil
 }
+
 func getEnv(key string, defaultValue string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value
@@ -70,5 +71,4 @@ func getEnvAsBool(key string, defaultValue bool) bool {
 	}
 
 	return defaultValue
-
 }
