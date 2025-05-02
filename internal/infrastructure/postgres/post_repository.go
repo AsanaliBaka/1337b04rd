@@ -3,6 +3,8 @@ package postgres
 import (
 	"1337b04rd/internal/domain"
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -84,8 +86,12 @@ func (p *postRepo) GetAllPost(ctx context.Context) ([]*domain.Post, error) {
 	}
 	return items, nil
 }
-func (p *postRepo) UpdatePost(ctx context.Context, post *domain.Post) error {
-	//Erkanat do that
+func (p *postRepo) UpdatePost(ctx context.Context, postId string, isArchive bool, upadtedAt time.Time) error {
+	_, err := p.db.Exec(ctx, qUpdatePost, upadtedAt, isArchive, postId)
+
+	if err != nil {
+		return fmt.Errorf("failed to update post %s: %w", postId, err)
+	}
 	return nil
 }
 func (p *postRepo) DeletePost(ctx context.Context, id string) error {

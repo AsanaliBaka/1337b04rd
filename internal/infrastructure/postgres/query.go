@@ -9,6 +9,12 @@ const (
 	qGetAllPost = `SELECT * 
 		FROM posts
 		ORDER BY id`
-	qUpdatePost = `UPDATE posts SET id = $1,title,content,image_url,author_id,created_at,upadted_at,is_archived `
+	qUpdatePost = `UPDATE posts SET updated_at = $1, is_archived = $2 WHERE id = $3 `
 	qDeletePost = `DELETE FROM posts where id=$1`
+)
+
+const (
+	qCreateSession  = `INSERT INTO users (session_id,avatar_url,name) VALUES($1,$2,$3)`
+	qGetByIDSession = `SELECT FROM users WHERE session_id = $1`
+	qDeleteSession  = `DELETE FROM users WHERE session_id = $1`
 )
