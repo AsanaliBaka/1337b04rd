@@ -105,3 +105,36 @@ func (p *postServer) GetPost(ctx context.Context, postID string) (*Post, *[]*Com
 	}
 	return post, &comments, nil
 }
+
+type SessionManager interface {
+	GetSessionId(id string, ctx context.Context) (*UserRef, error)
+	CreateSession(ctx context.Context, user *UserRef) error
+}
+type session struct {
+	session SessionRepository
+}
+
+func NewSession(s SessionRepository) SessionManager {
+	return &session{
+		session: s,
+	}
+}
+
+func (s *session) GetSessionId(id string, ctx context.Context) (*UserRef, error) {
+	user, err := s.session.GetByIDSession(ctx, id)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get session by ID %s: %w", id, err)
+	}
+
+	return user, nil
+
+}
+
+func (s *session) CreateSession(ctx context.Context, user *UserRef) error {
+	err := s.session.CreateSession(ctx, user)
+	if err != nil {
+		return fmt.Errorf("failed to create session: %w", err)
+	}
+	return nil
+}
