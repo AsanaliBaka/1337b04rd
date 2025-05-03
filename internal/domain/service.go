@@ -17,7 +17,7 @@ type postServer struct {
 
 type PostServer interface {
 	CreatePost(ctx context.Context, post *Post, imageData io.Reader) error
-	CreateComment(ctx context.Context, postID string, comment *Comment, imageData io.Reader) error
+	CreateComment(ctx context.Context, postID string, comment *Comment) error
 	GetAllPosts(ctx context.Context) ([]*Post, error)
 	GetPost(ctx context.Context, postID string) (*Post, *[]*Comment, error)
 }
@@ -68,18 +68,7 @@ func (p *postServer) GetAllPosts(ctx context.Context) ([]*Post, error) {
 	return posts, nil
 }
 
-func (p *postServer) CreateComment(ctx context.Context, postID string, comment *Comment, imageData io.Reader) error {
-	if imageData != nil {
-		imageName := "comment_" + comment.ID
-		imageURL, err := p.imageRepo.CreateImage(ctx, imageName, imageData, -1)
-
-		if err != nil {
-			return fmt.Errorf("failed to upload image for comment %s: %w", comment.ID, err)
-		}
-
-		comment.ImageURL = imageURL
-
-	}
+func (p *postServer) CreateComment(ctx context.Context, postID string, comment *Comment) error {
 
 	if err := p.commentRepo.CreateComment(comment); err != nil {
 		return fmt.Errorf("failed to create comment %s: %w", comment.ID, err)
@@ -102,6 +91,7 @@ func (p *postServer) CreateComment(ctx context.Context, postID string, comment *
 
 	return nil
 }
+
 func (p *postServer) GetPost(ctx context.Context, postID string) (*Post, *[]*Comment, error) {
 	post, err := p.postRepo.GetByIDPost(ctx, postID)
 

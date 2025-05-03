@@ -138,4 +138,14 @@ func (p *PostHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	comment := domain.NewComments(req.Text, *userRef)
+
+	if err := p.post.CreateComment(ctx, postID, comment); err != nil {
+		http.Error(w, "failed to create comment", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(comment)
+
 }
