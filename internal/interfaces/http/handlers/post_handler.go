@@ -114,3 +114,28 @@ func (p *PostHandler) GetById(w http.ResponseWriter, r *http.Request) {
 	}
 
 }
+
+func (p *PostHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	postID := r.PathValue("id")
+	if postID == "" {
+		http.Error(w, "missing post id", http.StatusBadRequest)
+		return
+	}
+
+	userRef, ok := ctx.Value("user").(*domain.UserRef)
+	if !ok || userRef == nil {
+		http.Error(w, "user not found in context", http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		Text string `json:"text"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+}
