@@ -7,12 +7,6 @@ import (
 	"net/http"
 )
 
-var Req struct {
-	Title   string `json:"title"`
-	Content string `json:"content"`
-	Image   string `json:"image"`
-}
-
 type PostHandler struct {
 	post domain.PostServer
 }
