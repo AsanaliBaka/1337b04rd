@@ -15,8 +15,8 @@ type PostRepository interface {
 }
 
 type CommentRepository interface {
-	CreateComment(comment *Comment) error
-	GetByPostIDComment(postID string) ([]*Comment, error)
+	CreateComment(ctx context.Context, comment *Comment) error
+	GetByPostIDComment(ctx context.Context, postID string) ([]*Comment, error)
 }
 
 type ImageStorage interface {

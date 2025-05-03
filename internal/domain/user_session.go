@@ -1,8 +1,9 @@
 package domain
 
 import (
-	. "1337b04rd/pkg"
 	"time"
+
+	"1337b04rd/pkg"
 )
 
 type UserRef struct {
@@ -14,7 +15,7 @@ type UserRef struct {
 
 func NewUser(avatar, name string) *UserRef {
 	return &UserRef{
-		SessionID: GeneratedId()(),
+		SessionID: pkg.GeneratedId()(),
 		AvatarURL: avatar,
 		Name:      name,
 	}

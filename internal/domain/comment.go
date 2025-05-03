@@ -1,9 +1,9 @@
 package domain
 
 import (
-	. "1337b04rd/pkg"
-
 	"time"
+
+	"1337b04rd/pkg"
 )
 
 type Comment struct {
@@ -16,7 +16,7 @@ type Comment struct {
 
 func NewComments(text, image string, author UserRef) *Comment {
 	return &Comment{
-		ID:        GeneratedId()(),
+		ID:        pkg.GeneratedId()(),
 		Text:      text,
 		Author:    author,
 		ImageURL:  image,
