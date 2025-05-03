@@ -13,7 +13,7 @@ type sessionRepository struct {
 	db *pgxpool.Pool
 }
 
-func NewSession(db *pgxpool.Pool) SessionRepository {
+func NewSessionRepo(db *pgxpool.Pool) SessionRepository {
 	return &sessionRepository{
 		db: db,
 	}

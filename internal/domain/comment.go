@@ -19,7 +19,6 @@ func NewComments(text, image string, author UserRef) *Comment {
 		ID:        pkg.GeneratedId()(),
 		Text:      text,
 		Author:    author,
-		ImageURL:  image,
 		CreatedAt: time.Now(),
 	}
 }
