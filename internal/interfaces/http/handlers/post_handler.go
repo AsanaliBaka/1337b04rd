@@ -7,12 +7,6 @@ import (
 	"net/http"
 )
 
-var Req struct {
-	Title   string `json:"title"`
-	Content string `json:"content"`
-	Image   string `json:"image"`
-}
-
 type PostHandler struct {
 	post domain.PostServer
 }
@@ -137,5 +131,15 @@ func (p *PostHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
+
+	comment := domain.NewComments(req.Text, *userRef)
+
+	if err := p.post.CreateComment(ctx, postID, comment); err != nil {
+		http.Error(w, "failed to create comment", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(comment)
 
 }

@@ -10,11 +10,10 @@ type Comment struct {
 	ID        string
 	Text      string
 	Author    UserRef
-	ImageURL  string
 	CreatedAt time.Time
 }
 
-func NewComments(text, image string, author UserRef) *Comment {
+func NewComments(text string, author UserRef) *Comment {
 	return &Comment{
 		ID:        pkg.GeneratedId()(),
 		Text:      text,

@@ -17,7 +17,7 @@ type postServer struct {
 
 type PostServer interface {
 	CreatePost(ctx context.Context, post *Post, imageData io.Reader) error
-	CreateComment(ctx context.Context, postID string, comment *Comment, imageData io.Reader) error
+	CreateComment(ctx context.Context, postID string, comment *Comment) error
 	GetAllPosts(ctx context.Context) ([]*Post, error)
 	GetPost(ctx context.Context, postID string) (*Post, *[]*Comment, error)
 }
@@ -98,6 +98,7 @@ func (p *postServer) CreateComment(ctx context.Context, postID string, comment *
 
 	return nil
 }
+
 
 func (p *postServer) GetPost(ctx context.Context, postID string) (*Post, *[]*Comment, error) {
 	post, err := p.postRepo.GetByIDPost(ctx, postID)
