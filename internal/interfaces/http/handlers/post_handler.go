@@ -1,19 +1,23 @@
 package handlers
 
 import (
-	"1337b04rd/internal/domain"
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"1337b04rd/internal/domain"
+	"1337b04rd/pkg/logger"
 )
 
 type PostHandler struct {
-	post domain.PostServer
+	post   domain.PostServer
+	logger *logger.CustomLogger
 }
 
-func NewPostHandler(p domain.PostServer) *PostHandler {
+func NewPostHandler(p domain.PostServer, l *logger.CustomLogger) *PostHandler {
 	return &PostHandler{
-		post: p,
+		post:   p,
+		logger: l,
 	}
 }
 
@@ -26,7 +30,6 @@ func (p *PostHandler) CreatePostHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	err := r.ParseMultipartForm(10 << 20)
-
 	if err != nil {
 		http.Error(w, "failed to parse form", http.StatusBadRequest)
 		return
@@ -50,7 +53,6 @@ func (p *PostHandler) CreatePostHandler(w http.ResponseWriter, r *http.Request) 
 	post := domain.NewPost(title, content, *user)
 
 	err = p.post.CreatePost(r.Context(), post, file)
-
 	if err != nil {
 		http.Error(w, "failed to create post", http.StatusInternalServerError)
 		return
@@ -64,7 +66,6 @@ func (p *PostHandler) GetAllPosts(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	posts, err := p.post.GetAllPosts(ctx)
-
 	if err != nil {
 		http.Error(w, "failed to get posts", http.StatusInternalServerError)
 		return
@@ -86,7 +87,6 @@ func (p *PostHandler) GetById(w http.ResponseWriter, r *http.Request) {
 	}
 
 	post, comments, err := p.post.GetPost(ctx, id)
-
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to retrieve post: %v", err), http.StatusInternalServerError)
 		return
@@ -106,7 +106,6 @@ func (p *PostHandler) GetById(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("failed to encode response: %v", err), http.StatusInternalServerError)
 		return
 	}
-
 }
 
 func (p *PostHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
@@ -141,5 +140,4 @@ func (p *PostHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(comment)
-
 }
