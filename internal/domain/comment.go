@@ -1,9 +1,9 @@
 package domain
 
 import (
-	"1337b04rd/pkg"
-
 	"time"
+
+	"1337b04rd/pkg"
 )
 
 type Comment struct {

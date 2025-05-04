@@ -35,6 +35,7 @@ func NewPostServer(
 		session:     sessionRepo,
 	}
 }
+
 func (p *postServer) CreatePost(ctx context.Context, post *Post, imageData io.Reader) error {
 	if imageData != nil {
 		imageName := "post_" + post.ID
@@ -46,7 +47,6 @@ func (p *postServer) CreatePost(ctx context.Context, post *Post, imageData io.Re
 	}
 
 	err := p.postRepo.CreatePost(ctx, post)
-
 	if err != nil {
 		return fmt.Errorf("failed to create post %s: %w", post.ID, err)
 	}
@@ -56,11 +56,10 @@ func (p *postServer) CreatePost(ctx context.Context, post *Post, imageData io.Re
 	slog.Info("post successfully created", "post_id", post.ID)
 
 	return nil
-
 }
+
 func (p *postServer) GetAllPosts(ctx context.Context) ([]*Post, error) {
 	posts, err := p.postRepo.GetAllPost(ctx)
-
 	if err != nil {
 		return nil, err
 	}
@@ -69,14 +68,11 @@ func (p *postServer) GetAllPosts(ctx context.Context) ([]*Post, error) {
 }
 
 func (p *postServer) CreateComment(ctx context.Context, postID string, comment *Comment) error {
-
 	if err := p.commentRepo.CreateComment(ctx, comment); err != nil {
 		return fmt.Errorf("failed to create comment %s: %w", comment.ID, err)
-
 	}
 
 	post, err := p.postRepo.GetByIDPost(ctx, postID)
-
 	if err != nil {
 		return fmt.Errorf("post not found for comment %s: %w", comment.ID, err)
 	}
@@ -94,12 +90,10 @@ func (p *postServer) CreateComment(ctx context.Context, postID string, comment *
 
 func (p *postServer) GetPost(ctx context.Context, postID string) (*Post, *[]*Comment, error) {
 	post, err := p.postRepo.GetByIDPost(ctx, postID)
-
 	if err != nil {
 		return nil, nil, fmt.Errorf("post not found: %w", err)
 	}
 	comments, err := p.commentRepo.GetByPostIDComment(ctx, postID)
-
 	if err != nil {
 		return nil, nil, err
 	}
@@ -122,13 +116,11 @@ func NewSession(s SessionRepository) SessionManager {
 
 func (s *session) GetSessionId(id string, ctx context.Context) (*UserRef, error) {
 	user, err := s.session.GetByIDSession(ctx, id)
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to get session by ID %s: %w", id, err)
 	}
 
 	return user, nil
-
 }
 
 func (s *session) CreateSession(ctx context.Context, user *UserRef) error {
