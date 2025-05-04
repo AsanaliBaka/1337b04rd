@@ -46,7 +46,7 @@ func (p *postRepo) GetByIDPost(ctx context.Context, id string) (*domain.Post, er
 		&item.Title,
 		&item.Content,
 		&item.ImageURL,
-		&item.Author,
+		&item.Author.SessionID,
 		&item.CreatedAt,
 		&item.UpdatedAt,
 		&item.IsArchived,
@@ -80,7 +80,8 @@ func (p *postRepo) GetAllPost(ctx context.Context) ([]*domain.Post, error) {
 			&item.UpdatedAt,
 			&item.IsArchived,
 		); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to scan post row: %w", err)
+
 		}
 		items = append(items, &item)
 	}

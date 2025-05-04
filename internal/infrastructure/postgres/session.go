@@ -1,10 +1,9 @@
 package postgres
 
 import (
+	"1337b04rd/internal/domain"
 	"context"
 	"fmt"
-
-	. "1337b04rd/internal/domain"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -13,13 +12,13 @@ type sessionRepository struct {
 	db *pgxpool.Pool
 }
 
-func NewSessionRepo(db *pgxpool.Pool) SessionRepository {
+func NewSessionRepo(db *pgxpool.Pool) domain.SessionRepository {
 	return &sessionRepository{
 		db: db,
 	}
 }
 
-func (s *sessionRepository) CreateSession(ctx context.Context, session *UserRef) error {
+func (s *sessionRepository) CreateSession(ctx context.Context, session *domain.UserRef) error {
 	_, err := s.db.Exec(ctx, qCreateSession,
 		session.SessionID,
 		session.AvatarURL,
@@ -30,8 +29,8 @@ func (s *sessionRepository) CreateSession(ctx context.Context, session *UserRef)
 	return nil
 }
 
-func (s *sessionRepository) GetByIDSession(ctx context.Context, sessionID string) (*UserRef, error) {
-	var userSession UserRef
+func (s *sessionRepository) GetByIDSession(ctx context.Context, sessionID string) (*domain.UserRef, error) {
+	var userSession domain.UserRef
 	err := s.db.QueryRow(ctx, qGetByIDSession).Scan(
 		&userSession.SessionID,
 		&userSession.AvatarURL,

@@ -1,7 +1,7 @@
 package domain
 
 import (
-	. "1337b04rd/pkg"
+	"1337b04rd/pkg"
 	"time"
 )
 
@@ -19,7 +19,7 @@ type Post struct {
 func NewPost(title, content string, author UserRef) *Post {
 
 	return &Post{
-		ID:        GeneratedId()(),
+		ID:        pkg.GeneratedId()(),
 		Title:     title,
 		Content:   content,
 		Author:    author,

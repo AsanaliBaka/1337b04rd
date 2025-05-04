@@ -70,7 +70,7 @@ func (p *postServer) GetAllPosts(ctx context.Context) ([]*Post, error) {
 
 func (p *postServer) CreateComment(ctx context.Context, postID string, comment *Comment) error {
 
-	if err := p.commentRepo.CreateComment(comment); err != nil {
+	if err := p.commentRepo.CreateComment(ctx, comment); err != nil {
 		return fmt.Errorf("failed to create comment %s: %w", comment.ID, err)
 
 	}
@@ -98,7 +98,7 @@ func (p *postServer) GetPost(ctx context.Context, postID string) (*Post, *[]*Com
 	if err != nil {
 		return nil, nil, fmt.Errorf("post not found: %w", err)
 	}
-	comments, err := p.commentRepo.GetByPostIDComment(postID)
+	comments, err := p.commentRepo.GetByPostIDComment(ctx, postID)
 
 	if err != nil {
 		return nil, nil, err

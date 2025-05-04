@@ -15,6 +15,11 @@ const (
 
 const (
 	qCreateSession  = `INSERT INTO users (session_id,avatar_url,name) VALUES($1,$2,$3)`
-	qGetByIDSession = `SELECT FROM users WHERE session_id = $1`
+	qGetByIDSession = `SELECT session_id, avatar_url, name FROM users WHERE session_id = $1`
 	qDeleteSession  = `DELETE FROM users WHERE session_id = $1`
+)
+
+const (
+	qCreateComment      = `INSERT INTO comments (id,texts, author_id,post_id,image_url,created_at) VALUES ($1,$2,$3,$4,$5,$6)`
+	qGetByPostIDComment = `SELECT id, texts, author_id, post_id, image_url, created_at FROM comments WHERE post_id = $1`
 )
