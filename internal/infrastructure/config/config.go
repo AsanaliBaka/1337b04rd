@@ -9,6 +9,11 @@ import (
 
 type Config struct {
 	Port          string
+	DBHost        string
+	DBPort        string
+	DBUser        string
+	DBPassword    string
+	DBName        string
 	MinioEndPoint string
 	BucketName    string
 	MinioUser     string
@@ -18,7 +23,12 @@ type Config struct {
 
 func LoadConfig() (*Config, error) {
 	appConfig := &Config{
-		Port: getEnv("PORT", "8080"),
+		Port:       getEnv("PORT", "8080"),
+		DBHost:     getEnv("DB_HOST", "localhost"),
+		DBPort:     getEnv("DB_PORT", "5432"),
+		DBUser:     getEnv("DB_USER", "postgres"),
+		DBPassword: getEnv("DB_PASSWORD", "postgres"),
+		DBName:     getEnv("DB_NAME", "1337board"),
 
 		MinioEndPoint: getEnv("MINIO_ENDPOINT", "localhost:9000"),
 		BucketName:    getEnv("MINIO_BUCKET_NAME", "defaultBucket"),
@@ -26,6 +36,7 @@ func LoadConfig() (*Config, error) {
 		MinioPassword: getEnv("MINIO_ROOT_PASSWORD", "minio_password"),
 		MinioSSL:      getEnvAsBool("MINIO_USE_SSL", false),
 	}
+
 	if err := validateConfig(appConfig); err != nil {
 		return nil, err
 	}
@@ -33,6 +44,7 @@ func LoadConfig() (*Config, error) {
 }
 
 func validateConfig(cfg *Config) error {
+	// Validate server config
 	if cfg.Port == "" {
 		return fmt.Errorf("port is required")
 	}
@@ -40,6 +52,21 @@ func validateConfig(cfg *Config) error {
 		cfg.Port = ":" + cfg.Port
 	}
 
+	// Validate DB config
+	if cfg.DBHost == "" {
+		return fmt.Errorf("database host is required")
+	}
+	if cfg.DBPort == "" {
+		return fmt.Errorf("database port is required")
+	}
+	if cfg.DBUser == "" {
+		return fmt.Errorf("database user is required")
+	}
+	if cfg.DBName == "" {
+		return fmt.Errorf("database name is required")
+	}
+
+	// Validate MinIO config
 	if cfg.MinioEndPoint == "" {
 		return fmt.Errorf("MinIO endpoint is required")
 	}
@@ -56,6 +83,16 @@ func validateConfig(cfg *Config) error {
 	return nil
 }
 
+// BuildDBConnectionString создает строку подключения к PostgreSQL
+func (c *Config) BuildDBConnectionString() string {
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
+		c.DBUser,
+		c.DBPassword,
+		c.DBHost,
+		c.DBPort,
+		c.DBName)
+}
+
 func getEnv(key string, defaultValue string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value
@@ -69,6 +106,5 @@ func getEnvAsBool(key string, defaultValue bool) bool {
 			return value
 		}
 	}
-
 	return defaultValue
 }
