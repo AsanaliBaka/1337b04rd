@@ -1,9 +1,10 @@
 package postgres
 
 import (
-	"1337b04rd/internal/domain"
 	"context"
 	"fmt"
+
+	"1337b04rd/internal/domain"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )

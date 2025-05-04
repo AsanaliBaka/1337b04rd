@@ -1,9 +1,10 @@
 package postgres
 
 import (
-	"1337b04rd/internal/domain"
 	"context"
 	"fmt"
+
+	"1337b04rd/internal/domain"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -26,18 +27,16 @@ func (c *commentRepository) CreateComment(ctx context.Context, comment *domain.C
 		&comment.PostId,
 		&comment.CreatedAt,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to create comment: %w", err)
 	}
 	return nil
-
 }
+
 func (c *commentRepository) GetByPostIDComment(ctx context.Context, postID string) ([]*domain.Comment, error) {
 	var items []*domain.Comment
 
 	comments, err := c.db.Query(ctx, qGetByPostIDComment)
-
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +54,6 @@ func (c *commentRepository) GetByPostIDComment(ctx context.Context, postID strin
 			&item.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan comment row: %w", err)
-
 		}
 
 		items = append(items, item)
