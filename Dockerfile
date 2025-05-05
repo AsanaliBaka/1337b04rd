@@ -15,13 +15,12 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /1337b04rd ./cmd/main.go
 
 # Финальная стадия
 FROM alpine:latest
-
 WORKDIR /app
-
 # Копируем бинарник
 COPY --from=builder /1337b04rd .
 # Копируем миграции
 COPY ./migrations ./migrations
+COPY web/templates /app/web/templates
 
 EXPOSE 8080
 

@@ -2,110 +2,95 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
+	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"1337b04rd/internal/domain"
-	"1337b04rd/internal/infrastructure/api"
-	"1337b04rd/internal/infrastructure/config"
-	"1337b04rd/internal/infrastructure/minio"
-	"1337b04rd/internal/infrastructure/postgres"
-	"1337b04rd/internal/interfaces/http/handlers"
-	"1337b04rd/pkg/logger"
-
-	"github.com/jackc/pgx/v5/pgxpool"
+	"1337b04rd/internal/adapters/left/transport/handler"
+	postgres "1337b04rd/internal/adapters/right/db"
+	"1337b04rd/internal/adapters/right/minio"
+	"1337b04rd/internal/application"
 )
 
 func main() {
-	// Инициализация конфигурации
-	cfg, err := config.LoadConfig()
-	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
-
 	// Инициализация логгера
-	appLogger, err := logger.NewCustomLogger()
-	if err != nil {
-		log.Fatalf("Failed to initialize logger: %v", err)
-	}
-	appLogger.Info("Application starting...", "version", "1.0.0")
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
 
-	// Инициализация подключения к PostgreSQL
-	dbConnString := buildDBConnectionString(cfg)
-	dbPool, err := pgxpool.New(context.Background(), dbConnString)
+	// Инициализация приложения
+	app, cleanup, err := setupApplication()
 	if err != nil {
-		appLogger.Error("Failed to connect to database", "error", err)
+		slog.Error("Application setup failed", "error", err)
 		os.Exit(1)
 	}
-	defer dbPool.Close()
+	defer cleanup()
 
-	if err := dbPool.Ping(context.Background()); err != nil {
-		appLogger.Error("Failed to ping database", "error", err)
-		os.Exit(1)
-	}
-	appLogger.Info("Successfully connected to database")
+	// Настройка HTTP сервера
+	server := setupServer(app)
 
-	// Инициализация хранилища изображений (MinIO/S3)
-	imageStorage, err := minio.NewImageStrorage(cfg, context.Background())
+	// Запуск сервера и воркера
+	startServer(server)
+}
+
+func setupApplication() (*application.Application, func(), error) {
+	// Инициализация БД
+	dbRepo, err := postgres.NewPostgresRepository(os.Getenv("DB_DSN"))
 	if err != nil {
-		appLogger.Error("Failed to initialize image storage", "error", err)
-		os.Exit(1)
+		return nil, nil, fmt.Errorf("database initialization failed: %w", err)
 	}
-	appLogger.Info("Image storage initialized")
 
-	// Инициализация Rick and Morty API
-	rickAndMortyAPI := api.NewRickAndMortyAPI(appLogger)
-	appLogger.Info("Rick and Morty API client initialized")
+	// Инициализация MinIO
+	minioClient, err := minio.New(minio.DefaultConfig())
+	if err != nil {
+		dbRepo.Close()
+		return nil, nil, fmt.Errorf("minio initialization failed: %w", err)
+	}
 
-	// Инициализация репозиториев
-	postRepo := postgres.NewPostRepo(dbPool)
-	commentRepo := postgres.NewCommentRepo(dbPool)
-	sessionRepo := postgres.NewSessionRepo(dbPool)
+	// Создание зависимостей приложения
+	app := application.New(dbRepo, minioClient)
 
-	// Инициализация сервисов
-	sessionService := domain.NewSessionService(postRepo)
-	postService := domain.NewPostServer(postRepo, commentRepo, imageStorage, sessionService)
-	sessionManager := domain.NewSession(sessionRepo)
+	// Очистка ресурсов
+	cleanup := func() {
+		dbRepo.Close()
+	}
 
-	// Инициализация HTTP обработчиков
-	handler := handlers.NewHandler(
-		postService,
-		sessionManager,
-		rickAndMortyAPI,
-		appLogger,
-	)
+	return app, cleanup, nil
+}
 
-	// Создание HTTP сервера с использованием вашей структуры Server
-	server := handlers.NewServer(cfg.Port, handler)
+func setupServer() *http.Server {
+	router := handler.SetupRoutes()
+	server := &http.Server{
+		Addr:         ":8080",
+		Handler:      router,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+	return server
+}
 
-	// Канал для graceful shutdown
-	shutdownChan := make(chan os.Signal, 1)
-	signal.Notify(shutdownChan, syscall.SIGINT, syscall.SIGTERM)
+func startServer(server *http.Server) {
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
-	// Запуск сервера в отдельной горутине
 	go func() {
-		appLogger.Info("Starting HTTP server", "port", cfg.Port)
-		server.Start()
+		slog.Info("Starting server", "address", server.Addr)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("Server failed", "error", err)
+		}
 	}()
 
-	// Ожидание сигнала завершения
-	sig := <-shutdownChan
-	appLogger.Info("Received shutdown signal", "signal", sig)
+	<-done
+	slog.Info("Shutting down server...")
 
-	// Настройка graceful shutdown
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		appLogger.Error("Server shutdown failed", "error", err)
-	} else {
-		appLogger.Info("Server stopped gracefully")
+		slog.Error("Server shutdown failed", "error", err)
 	}
-}
-
-func buildDBConnectionString(cfg *config.Config) string {
-	return "postgres://" + cfg.DBUser + ":" + cfg.DBPassword + "@" + cfg.DBHost + ":" + cfg.DBPort + "/" + cfg.DBName
 }

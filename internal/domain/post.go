@@ -1,29 +1,28 @@
 package domain
 
-import (
-	"time"
-
-	"1337b04rd/pkg"
-)
+import "time"
 
 type Post struct {
-	ID         string
-	Title      string
-	Content    string
-	ImageURL   string
-	Author     UserRef
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	IsArchived bool
+	ID        string
+	Title     string
+	Content   string
+	ImageURL  string
+	User      User
+	CreatedAt time.Time
+	Comments  []Comment
 }
 
-func NewPost(title, content string, author UserRef) *Post {
-	return &Post{
-		ID:        pkg.GeneratedId()(),
-		Title:     title,
-		Content:   content,
-		Author:    author,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now().Add(10 * time.Minute),
-	}
+type Comment struct {
+	ID        string
+	PostID    string
+	ParentID  *string // nil если ответ на пост
+	Content   string
+	User      User
+	CreatedAt time.Time
+}
+
+type User struct {
+	SessionID string
+	Name      string
+	AvatarURL string
 }
