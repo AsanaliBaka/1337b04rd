@@ -5,60 +5,58 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Post.Title}} (Archived) - 1337b04rd</title>
     <style>
+        /* Основной стиль */
         body {
             background-color: #E6E9F5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
+            padding: 20px;
+            color: #333;
         }
 
-        header, footer {
-            text-align: center;
-            padding: 10px 0;
-            background-color: #35495E;
-            color: #FFF;
-        }
-
-        header a, footer a {
-            color: #FFD700;
+        a {
+            color: #2F80ED;
             text-decoration: none;
+            font-weight: bold;
         }
 
-        header a:hover, footer a:hover {
+        a:hover {
             text-decoration: underline;
         }
 
-        main {
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 20px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        h1, h2 {
+            text-align: center;
+            color: #2F80ED;
         }
 
-        h1, h2 {
-            color: #35495E;
+        .post {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 800px;
         }
 
         .post img {
             max-width: 100%;
-            height: auto;
-            border-radius: 8px;
-            margin-top: 10px;
+            border-radius: 10px;
+            margin-top: 15px;
         }
 
         .comments {
-            margin-top: 20px;
+            max-width: 800px;
+            margin: 20px auto;
         }
 
         .comment {
-            background-color: #F8F9FA;
-            border: 1px solid #ddd;
-            padding: 15px;
+            background: white;
             border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            padding: 15px;
             margin-bottom: 15px;
             display: flex;
+            gap: 15px;
             align-items: flex-start;
         }
 
@@ -66,7 +64,6 @@
             width: 50px;
             height: 50px;
             border-radius: 50%;
-            margin-right: 15px;
             object-fit: cover;
         }
 
@@ -78,53 +75,40 @@
             margin: 5px 0;
         }
 
-        .comment-content strong {
-            color: #35495E;
-        }
-
         .no-comments {
             text-align: center;
-            color: #555;
-            margin-top: 20px;
+            font-size: 1.1rem;
+            color: #777;
         }
     </style>
 </head>
 <body>
-<header>
-    <h1>1337b04rd</h1>
-    <nav>
-        [<a href="/archive">Back to Archive</a>] | [<a href="/catalog">Catalog</a>]
-    </nav>
-</header>
-<main>
-    <section class="post">
-        <h1>{{.Post.Title}} (Archived)</h1>
-        <p>{{.Post.Content}}</p>
-        {{if .Post.ImageURL}}
-        <img src="{{.Post.ImageURL}}" alt="Post Image">
-        {{end}}
-        <p><strong>Post ID:</strong> {{.Post.ID}}</p>
-    </section>
-    <section class="comments">
-        <h2>Comments</h2>
-        {{range .Comments}}
-        <div class="comment">
-            <img class="avatar" src="{{.AvatarURL}}" alt="User Avatar">
-            <div class="comment-content">
-                <p><strong>Comment ID:</strong> {{.ID}}</p>
-                {{if .ReplyToID}}
-                <p><em>Reply to ID:</em> {{.ReplyToID}}</p>
-                {{end}}
-                <p>{{.Content}}</p>
-            </div>
+<a href="/archive">← Back to Archive</a>
+<div class="post">
+    <h1>{{.Post.Title}} (Archived)</h1>
+    <p>{{.Post.Content}}</p>
+    {{if .Post.ImageURL}}
+    <img src="{{.Post.ImageURL}}" alt="Post Image">
+    {{end}}
+    <p><strong>Post ID:</strong> {{.Post.ID}}</p>
+</div>
+
+<div class="comments">
+    <h2>Comments</h2>
+    {{range .Comments}}
+    <div class="comment">
+        <img class="avatar" src="{{.AvatarURL}}" alt="User Avatar">
+        <div class="comment-content">
+            <p><strong>Comment ID:</strong> {{.ID}}</p>
+            {{if .ReplyToID}}
+            <p><em>Reply to ID:</em> {{.ReplyToID}}</p>
+            {{end}}
+            <p>{{.Content}}</p>
         </div>
-        {{else}}
-        <p class="no-comments">No comments available.</p>
-        {{end}}
-    </section>
-</main>
-<footer>
-    <p>&copy; 2025 1337b04rd</p>
-</footer>
+    </div>
+    {{else}}
+    <p class="no-comments">No comments available.</p>
+    {{end}}
+</div>
 </body>
 </html>

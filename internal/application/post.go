@@ -19,7 +19,6 @@ func (app *App) CreatePost(ctx context.Context, post *domain.Post) error {
 		return err
 	}
 
-	// Таймер
 	if timer, ok := app.timers[post.ID]; ok {
 		timer.Stop()
 	}
@@ -106,5 +105,11 @@ func (app *App) GetArchivedPostByID(ctx context.Context, id string) (*domain.Pos
 }
 
 func (app *App) archivePost(ctx context.Context, id string) (*domain.Post, error) {
-	return app.repo.ArchivePostByID(ctx, id)
+	post, err := app.repo.ArchivePostByID(ctx, id)
+	if err != nil {
+		fmt.Printf("Failed to archive post %s: %v\n", id, err)
+		return nil, err
+	}
+	fmt.Printf("Successfully archived post %s\n", id)
+	return post, nil
 }

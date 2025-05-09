@@ -20,7 +20,7 @@ func (app *App) AddComment(ctx context.Context, postID string, comment *domain.C
 		return fmt.Errorf("get user by id: %w", err)
 	}
 
-	comment.AvaterLink = author.ImageURL
+	comment.AvatarLink = author.ImageURL
 
 	app.Lock()
 	defer app.Unlock()
@@ -53,7 +53,6 @@ func (app *App) AddComment(ctx context.Context, postID string, comment *domain.C
 }
 
 func (app *App) ReplyToComment(ctx context.Context, parentCommentID string, reply *domain.Comment) error {
-	// 1. Проверяем существование родительского комментария
 	parentPost, err := app.findPostByCommentID(ctx, parentCommentID)
 	if err != nil {
 		return fmt.Errorf("parent comment not found: %w", err)
@@ -64,7 +63,7 @@ func (app *App) ReplyToComment(ctx context.Context, parentCommentID string, repl
 		return fmt.Errorf("get user by id: %w", err)
 	}
 
-	reply.AvaterLink = author.ImageURL
+	reply.AvatarLink = author.ImageURL
 
 	// 2. Проверяем активность поста
 	app.Lock()

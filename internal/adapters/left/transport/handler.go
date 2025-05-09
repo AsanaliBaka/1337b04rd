@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"html/template"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -40,19 +41,18 @@ func (h *Handler) HandleCatalog(w http.ResponseWriter, r *http.Request) {
 	data, err := h.service.GetCatalog(ctx)
 	if err != nil {
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			h.logger.Error("Request timed out", "error", err)
-			h.renderError(w, http.StatusGatewayTimeout, "Request timed out")
+			http.Error(w, "Request timed out", http.StatusGatewayTimeout)
 			return
 		}
 
-		h.logger.Error("Failed to get catalog", "error", err)
-		h.renderError(w, http.StatusInternalServerError, "Internal Server Error")
+		slog.Error("GetCatalog error", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
 	if err := h.templates.ExecuteTemplate(w, "catalog.html", data); err != nil {
-		h.logger.Error("Failed to render template", "error", err)
-		h.renderError(w, http.StatusInternalServerError, "Render error")
+		slog.Error("Failed to render template", "error", err)
+		http.Error(w, "Render error", http.StatusInternalServerError)
 		return
 	}
 }
@@ -66,110 +66,58 @@ func (h *Handler) HandleGetPost(w http.ResponseWriter, r *http.Request) {
 	data, err := h.service.GetPostByID(ctx, id)
 	if err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
-			h.logger.Error("Request timed out", "error", err)
-			h.renderError(w, http.StatusGatewayTimeout, "Request timed out")
+			http.Error(w, "Request timed out", http.StatusGatewayTimeout)
 			return
 		}
 
-		h.logger.Error("Failed to get post", "error", err)
-		h.renderError(w, http.StatusInternalServerError, "Internal Server Error")
+		slog.Error(err.Error())
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
+	// Используем буфер для безопасного рендеринга шаблона
 	var buf bytes.Buffer
 	if err := h.templates.ExecuteTemplate(&buf, "post.html", data); err != nil {
-		h.logger.Error("Render error", "error", err)
-		h.renderError(w, http.StatusInternalServerError, "Render error")
+		slog.Error("Failed to render template", "error", err)
+		http.Error(w, "Render error", http.StatusInternalServerError)
 		return
 	}
 
+	// Пишем рендеренный контент в ответ
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, err = w.Write(buf.Bytes())
 	if err != nil {
-		h.logger.Error("Write error", "error", err)
-		h.renderError(w, http.StatusInternalServerError, "Write error")
-		return
+		slog.Error("Failed to send response", "error", err)
 	}
 }
 
 func (h *Handler) HandleCreatePostForm(w http.ResponseWriter, r *http.Request) {
+	// Проверяем существование шаблона
 	if h.templates.Lookup("create-post.html") == nil {
-		h.logger.Error("Template not found", "template", "create-post.html")
-		h.renderError(w, http.StatusInternalServerError, "Template not found")
+		slog.Error("Template not found", "template", "create-post.html")
+		http.Error(w, "Template not found", http.StatusInternalServerError)
 		return
 	}
 
+	// Добавляем данные, если нужно
 	data := struct {
 		Title string
 	}{
 		Title: "Create New Post",
 	}
 
+	// Рендерим шаблон
 	err := h.templates.ExecuteTemplate(w, "create-post.html", data)
 	if err != nil {
-		h.logger.Error("Failed to execute template", "error", err)
-		h.renderError(w, http.StatusInternalServerError, "Internal Server Error")
-		return
-	}
-}
-
-func (h *Handler) HandleArchiveList(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	data, err := h.service.GetArchiveList(ctx)
-	if err != nil {
-		if ctx.Err() == context.DeadlineExceeded {
-			h.logger.Error("Request timed out", "error", err)
-			h.renderError(w, http.StatusGatewayTimeout, "Request timed out")
-			return
-		}
-
-		h.logger.Error("Failed to get archive list", "error", err)
-		h.renderError(w, http.StatusInternalServerError, "Internal Server Error")
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := h.templates.ExecuteTemplate(w, "archive.html", data); err != nil {
-		h.logger.Error("Failed to render template", "error", err)
-		h.renderError(w, http.StatusInternalServerError, "Render error")
-		return
-	}
-}
-
-func (h *Handler) HandleGetArchivedPost(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	data, err := h.service.GetArchivedPostByID(ctx, id)
-	if err != nil {
-		if ctx.Err() == context.DeadlineExceeded {
-			h.logger.Error("Request timed out", "error", err)
-			h.renderError(w, http.StatusGatewayTimeout, "Request timed out")
-			return
-		}
-
-		h.logger.Error("Failed to get archived post", "error", err)
-		h.renderError(w, http.StatusInternalServerError, "Internal Server Error")
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-
-	if err := h.templates.ExecuteTemplate(w, "archive-post.html", data); err != nil {
-		h.logger.Error("Render error", "error", err)
-		h.renderError(w, http.StatusInternalServerError, "Render error")
+		slog.Error("Template execution error", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 }
 
 func (h *Handler) HandleSubmitPost(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
-		h.logger.Error("Failed to parse form", "error", err)
-		h.renderError(w, http.StatusBadRequest, "Failed to parse form")
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
 		return
 	}
 
@@ -177,23 +125,20 @@ func (h *Handler) HandleSubmitPost(w http.ResponseWriter, r *http.Request) {
 	content := r.FormValue("content")
 
 	if title == "" || content == "" {
-		h.logger.Error("Title and content are required")
-		h.renderError(w, http.StatusBadRequest, "Title and content are required")
+		http.Error(w, "Title and content are required", http.StatusBadRequest)
 		return
 	}
 
 	file, header, err := r.FormFile("image")
 	if err != nil {
-		h.logger.Error("Failed to get file from form", "error", err)
-		h.renderError(w, http.StatusBadRequest, "Failed to get file from form")
+		http.Error(w, "Failed to get image", http.StatusBadRequest)
 		return
 	}
 	defer file.Close()
 
 	session, ok := r.Context().Value(SessionKey).(*domain.Session)
 	if !ok || session == nil {
-		h.logger.Error("Session not found or expired")
-		h.renderError(w, http.StatusUnauthorized, "Unauthorized")
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -202,8 +147,8 @@ func (h *Handler) HandleSubmitPost(w http.ResponseWriter, r *http.Request) {
 
 	postID, err := pkg.GenerateUUID()
 	if err != nil {
-		h.logger.Error("Failed to generate UUID", "error", err)
-		h.renderError(w, http.StatusInternalServerError, "Failed to generate UUID")
+		slog.Error("UUID generation failed", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -218,15 +163,15 @@ func (h *Handler) HandleSubmitPost(w http.ResponseWriter, r *http.Request) {
 	// Загрузка изображения
 	objectName, err := h.imageStorage.UploadImage(ctx, file, header)
 	if err != nil {
-		h.logger.Error("Failed to upload image", "error", err)
-		h.renderError(w, http.StatusInternalServerError, "Failed to upload image")
+		slog.Error("Image upload failed", "error", err)
+		http.Error(w, "Failed to upload image", http.StatusInternalServerError)
 		return
 	}
 	post.ImageURL = "/images/" + objectName
 
 	if err := h.service.CreatePost(ctx, post); err != nil {
-		h.logger.Error("Failed to create post", "error", err)
-		h.renderError(w, http.StatusInternalServerError, "Internal Server Error")
+		slog.Error("Post creation failed", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -235,15 +180,13 @@ func (h *Handler) HandleSubmitPost(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) HandleAddComment(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		h.logger.Error("Failed to parse form", "error", err)
-		h.renderError(w, http.StatusBadRequest, "Invalid form data")
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
 		return
 	}
 
 	session, ok := r.Context().Value(SessionKey).(*domain.Session)
 	if !ok || session == nil {
-		h.logger.Error("Session not found or expired")
-		h.renderError(w, http.StatusUnauthorized, "Unauthorized")
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -252,16 +195,13 @@ func (h *Handler) HandleAddComment(w http.ResponseWriter, r *http.Request) {
 	content := r.FormValue("content")
 
 	if content == "" {
-		h.logger.Error("Content is required")
-		h.renderError(w, http.StatusBadRequest, "Content is required")
+		http.Error(w, "Content are required", http.StatusBadRequest)
 		return
 	}
 
 	uuid, err := pkg.GenerateUUID()
 	if err != nil {
-		h.logger.Error("Failed to generate UUID", "error", err)
-		h.renderError(w, http.StatusInternalServerError, "Failed to generate UUID")
-		return
+		slog.Error(err.Error())
 	}
 
 	comment := &domain.Comment{
@@ -276,14 +216,12 @@ func (h *Handler) HandleAddComment(w http.ResponseWriter, r *http.Request) {
 
 	if parentID != "" {
 		if err := h.service.ReplyToComment(ctx, parentID, comment); err != nil {
-			h.logger.Error("Failed to add reply", "error", err)
-			h.renderError(w, http.StatusInternalServerError, "Failed to add reply: "+err.Error())
+			http.Error(w, "Failed to add reply: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	} else {
 		if err := h.service.AddComment(ctx, postID, comment); err != nil {
-			h.logger.Error("Failed to add comment", "error", err)
-			h.renderError(w, http.StatusInternalServerError, "Failed to add comment: "+err.Error())
+			http.Error(w, "Failed to add comment: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
@@ -291,43 +229,71 @@ func (h *Handler) HandleAddComment(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/post/"+postID, http.StatusSeeOther)
 }
 
+func (h *Handler) HandleArchiveList(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	data, err := h.service.GetArchiveList(ctx)
+	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			http.Error(w, "Request timed out", http.StatusGatewayTimeout)
+			return
+		}
+
+		slog.Error(err.Error())
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := h.templates.ExecuteTemplate(w, "archive.html", data); err != nil {
+		slog.Error("Failed to render template", "error", err)
+		http.Error(w, "Render error", http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *Handler) HandleGetArchivedPost(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	data, err := h.service.GetArchivedPostByID(ctx, id)
+	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			http.Error(w, "Request timed out", http.StatusGatewayTimeout)
+			return
+		}
+
+		slog.Error(err.Error())
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if err := h.templates.ExecuteTemplate(w, "archive-post.html", data); err != nil {
+		slog.Error("Failed to render template", "error", err)
+		http.Error(w, "Render error", http.StatusInternalServerError)
+		return
+	}
+}
+
 func (h *Handler) ServeImage(w http.ResponseWriter, r *http.Request) {
 	parts := strings.Split(r.URL.Path, "/")
 	if len(parts) < 3 {
-		h.logger.Error("Invalid image path", "path", r.URL.Path)
-		h.renderError(w, http.StatusBadRequest, "Invalid image path")
+		http.Error(w, "Invalid image path", http.StatusBadRequest)
 		return
 	}
 	imageName := parts[2]
 
 	data, contentType, err := h.imageStorage.GetImage(r.Context(), imageName)
 	if err != nil {
-		h.logger.Error("Failed to get image", "error", err)
-		h.renderError(w, http.StatusNotFound, "Image not found")
+		http.Error(w, "Image not found", http.StatusNotFound)
 		return
 	}
 
 	w.Header().Set("Content-Type", contentType)
 	w.Write(data)
-}
-
-func (h *Handler) renderError(w http.ResponseWriter, status int, message string) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-
-	var buf bytes.Buffer
-	err := h.templates.ExecuteTemplate(&buf, "error.html", map[string]interface{}{
-		"Code":    status,
-		"Message": message,
-	})
-	if err != nil {
-		h.logger.Error("Failed to render error template", "error", err)
-		http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
-		return
-	}
-
-	_, writeErr := w.Write(buf.Bytes())
-	if writeErr != nil {
-		h.logger.Error("Failed to write response", "error", writeErr)
-		return
-	}
 }

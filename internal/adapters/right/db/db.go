@@ -199,7 +199,7 @@ func (r *Repo) AddComment(ctx context.Context, postID string, comment *domain.Co
 	_, err := r.Conn.ExecContext(ctx, `
 		INSERT INTO Comment (comment_id, content,avatar, post_id, user_id)
 		 VALUES ($1, $2, $3, $4, $5)
-	`, comment.ID, comment.Content, comment.AvaterLink, postID, comment.Author)
+	`, comment.ID, comment.Content, comment.AvatarLink, postID, comment.Author)
 	return err
 }
 
@@ -207,7 +207,7 @@ func (r *Repo) ReplyToComment(ctx context.Context, postID string, parentID strin
 	_, err := r.Conn.ExecContext(ctx, `
 		INSERT INTO Comment (content, avatar, post_id, parent_comment_id, user_id)
 		VALUES ($1, $2, $3, $4, $5)
-	`, comment.Content, comment.AvaterLink, postID, parentID, comment.Author)
+	`, comment.Content, comment.AvatarLink, postID, parentID, comment.Author)
 	return err
 }
 
@@ -292,7 +292,7 @@ func (r *Repo) getCommentsByPostID(ctx context.Context, postID string) ([]domain
 	var comments []domain.Comment
 	for rows.Next() {
 		var c domain.Comment
-		if err := rows.Scan(&c.ID, &c.Content, &c.CreatedAt, &c.Author, &c.AvaterLink); err != nil {
+		if err := rows.Scan(&c.ID, &c.Content, &c.CreatedAt, &c.Author, &c.AvatarLink); err != nil {
 			return nil, err
 		}
 		comments = append(comments, c)

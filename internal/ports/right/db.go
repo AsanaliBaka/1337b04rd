@@ -29,7 +29,6 @@ type ArchiveRepository interface {
 type CommentRepository interface {
 	AddComment(ctx context.Context, PostId string, comment *domain.Comment) error
 	ReplyToComment(ctx context.Context, PostID string, UserID string, comment *domain.Comment) error
-	// ReplyToComment(ctx context.Context, userID string, parentCommentID string, text string) error
 }
 
 type UserRepository interface {

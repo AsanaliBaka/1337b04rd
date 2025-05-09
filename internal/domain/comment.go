@@ -6,7 +6,7 @@ type Comment struct {
 	ID         string
 	Author     string
 	Content    string
-	AvaterLink string
+	AvatarLink string
 	ParentID   string
 	Replies    []Comment
 	CreatedAt  time.Time
