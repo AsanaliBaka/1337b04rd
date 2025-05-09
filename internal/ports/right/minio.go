@@ -1,10 +1,14 @@
 package right
 
-import "io"
+import (
+	"context"
+	"mime/multipart"
+)
 
+type MinioPort interface {
+	ImageStorage
+}
 type ImageStorage interface {
-	UploadImage(bucketName string, fileName string, imageData io.Reader, size int64) (string, error)
-	GetImageURL(bucketName string, fileName string) (string, error)
-	CreateBucket(bucketName string) error
-	BucketExists(bucketName string) (bool, error)
+	UploadImage(ctx context.Context, file multipart.File, fileHeader *multipart.FileHeader) (string, error)
+	GetImage(ctx context.Context, imageName string) ([]byte, string, error)
 }

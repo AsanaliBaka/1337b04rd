@@ -1,96 +1,58 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"log/slog"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
+	"log"
 
-	"1337b04rd/internal/adapters/left/transport/handler"
-	postgres "1337b04rd/internal/adapters/right/db"
+	"1337b04rd/internal/adapters/left/transport"
+	"1337b04rd/internal/adapters/right/api"
+	"1337b04rd/internal/adapters/right/db"
 	"1337b04rd/internal/adapters/right/minio"
 	"1337b04rd/internal/application"
+	"1337b04rd/pkg/logger"
 )
 
 func main() {
-	// Инициализация логгера
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	slog.SetDefault(logger)
-
-	// Инициализация приложения
-	app, cleanup, err := setupApplication()
+	// Логгер
+	logger, err := logger.NewCustomLogger()
 	if err != nil {
-		slog.Error("Application setup failed", "error", err)
-		os.Exit(1)
+		log.Fatalf("Failed to initialize logger: %v", err)
 	}
-	defer cleanup()
+	logger.Info("Logger initialized successfully")
 
-	// Настройка HTTP сервера
-	server := setupServer(app)
-
-	// Запуск сервера и воркера
-	startServer(server)
-}
-
-func setupApplication() (*application.Application, func(), error) {
-	// Инициализация БД
-	dbRepo, err := postgres.NewPostgresRepository(os.Getenv("DB_DSN"))
-	if err != nil {
-		return nil, nil, fmt.Errorf("database initialization failed: %w", err)
-	}
+	postgres := db.NewPostgres()
+	defer postgres.Close()
+	logger.Info("Database connection established successfully")
 
 	// Инициализация MinIO
-	minioClient, err := minio.New(minio.DefaultConfig())
+	minioClient, err := minio.NewImageStorage(
+		"minio:9000",
+		"minioadmin",
+		"minioadmin",
+		"images",
+		false,
+	)
 	if err != nil {
-		dbRepo.Close()
-		return nil, nil, fmt.Errorf("minio initialization failed: %w", err)
+		logger.Error("Failed to initialize MinIO:", err)
+		log.Fatalf("MinIO initialization error: %v", err)
 	}
+	logger.Info("MinIO client initialized successfully")
 
-	// Создание зависимостей приложения
-	app := application.New(dbRepo, minioClient)
-
-	// Очистка ресурсов
-	cleanup := func() {
-		dbRepo.Close()
+	// Инициализация Rick and Morty API
+	rickAndMortyAPI, err := api.NewRickAndMortyAPI()
+	if err != nil {
+		logger.Error("Failed to initialize Rick and Morty API:", err)
+		log.Fatalf("Rick and Morty API initialization error: %v", err)
 	}
+	logger.Info("Rick and Morty API initialized successfully")
+	user_service := application.NewUser()
 
-	return app, cleanup, nil
-}
+	service := application.NewApp(postgres, rickAndMortyAPI, minioClient, *user_service)
 
-func setupServer() *http.Server {
-	router := handler.SetupRoutes()
-	server := &http.Server{
-		Addr:         ":8080",
-		Handler:      router,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 30 * time.Second,
-		IdleTimeout:  60 * time.Second,
-	}
-	return server
-}
-
-func startServer(server *http.Server) {
-	done := make(chan os.Signal, 1)
-	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-
-	go func() {
-		slog.Info("Starting server", "address", server.Addr)
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("Server failed", "error", err)
-		}
-	}()
-
-	<-done
-	slog.Info("Shutting down server...")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := server.Shutdown(ctx); err != nil {
-		slog.Error("Server shutdown failed", "error", err)
+	logger.Info("Service initialized successfully")
+	// Запуск сервера
+	server := transport.NewHTTPServer(service, logger, minioClient)
+	if err := server.Serve(); err != nil {
+		logger.Error("Failed to start server:", err)
+		log.Fatalf("Server error: %v", err)
 	}
 }

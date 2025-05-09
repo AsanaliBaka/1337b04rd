@@ -1,50 +1,130 @@
-<!-- templates/archive-post.html -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>{{.Post.Title}} (Archived)</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Post.Title}} (Archived) - 1337b04rd</title>
     <style>
-        .comment {
-            border: 1px solid #ccc;
-            padding: 10px;
-            margin: 10px 0;
+        body {
+            background-color: #E6E9F5;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
         }
+
+        header, footer {
+            text-align: center;
+            padding: 10px 0;
+            background-color: #35495E;
+            color: #FFF;
+        }
+
+        header a, footer a {
+            color: #FFD700;
+            text-decoration: none;
+        }
+
+        header a:hover, footer a:hover {
+            text-decoration: underline;
+        }
+
+        main {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1, h2 {
+            color: #35495E;
+        }
+
+        .post img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .comments {
+            margin-top: 20px;
+        }
+
+        .comment {
+            background-color: #F8F9FA;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+        }
+
         .comment img.avatar {
             width: 50px;
-            vertical-align: middle;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 15px;
+            object-fit: cover;
         }
+
         .comment-content {
-            display: inline-block;
-            vertical-align: middle;
-            margin-left: 10px;
+            flex: 1;
+        }
+
+        .comment-content p {
+            margin: 5px 0;
+        }
+
+        .comment-content strong {
+            color: #35495E;
+        }
+
+        .no-comments {
+            text-align: center;
+            color: #555;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-<a href="/archive">Back to Archive</a>
-<h1>{{.Post.Title}} (Archived)</h1>
-<p>{{.Post.Content}}</p>
-{{if .Post.ImageURL}}
-<img src="{{.Post.ImageURL}}" alt="Post Image">
-{{end}}
-<p>Post ID: {{.Post.ID}}</p>
-<h2>Comments</h2>
-<div class="comments">
-    {{range .Comments}}
-    <div class="comment">
-        <img class="avatar" src="{{.AvatarURL}}" alt="User Avatar">
-        <div class="comment-content">
-            <p><strong>Comment ID:</strong> {{.ID}}</p>
-            {{if .ReplyToID}}
-            <p><em>Reply to ID: {{.ReplyToID}}</em></p>
-            {{end}}
-            <p>{{.Content}}</p>
+<header>
+    <h1>1337b04rd</h1>
+    <nav>
+        [<a href="/archive">Back to Archive</a>] | [<a href="/catalog">Catalog</a>]
+    </nav>
+</header>
+<main>
+    <section class="post">
+        <h1>{{.Post.Title}} (Archived)</h1>
+        <p>{{.Post.Content}}</p>
+        {{if .Post.ImageURL}}
+        <img src="{{.Post.ImageURL}}" alt="Post Image">
+        {{end}}
+        <p><strong>Post ID:</strong> {{.Post.ID}}</p>
+    </section>
+    <section class="comments">
+        <h2>Comments</h2>
+        {{range .Comments}}
+        <div class="comment">
+            <img class="avatar" src="{{.AvatarURL}}" alt="User Avatar">
+            <div class="comment-content">
+                <p><strong>Comment ID:</strong> {{.ID}}</p>
+                {{if .ReplyToID}}
+                <p><em>Reply to ID:</em> {{.ReplyToID}}</p>
+                {{end}}
+                <p>{{.Content}}</p>
+            </div>
         </div>
-    </div>
-    {{else}}
-    <p>No comments available.</p>
-    {{end}}
-</div>
-<!-- Comment form is omitted since adding new comments is not allowed -->
+        {{else}}
+        <p class="no-comments">No comments available.</p>
+        {{end}}
+    </section>
+</main>
+<footer>
+    <p>&copy; 2025 1337b04rd</p>
+</footer>
 </body>
 </html>

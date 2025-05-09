@@ -72,17 +72,17 @@ func (c *RickAndMortyAPI) fetchTotalCharacters() error {
 	return nil
 }
 
-func (c *RickAndMortyAPI) GetRandomUser() (*domain.User, error) {
+func (c *RickAndMortyAPI) GetRandomAvatar() (*domain.User, error) {
 	if c.totalCharacters == 0 {
 		return nil, errors.New("no characters available")
 	}
 
 	// Генерируем случайный ID в пределах доступных персонажей
 	randomID := rand.Intn(c.totalCharacters) + 1
-	return c.GetUserByID(randomID)
+	return c.GetRandomAvatarByID(randomID)
 }
 
-func (c *RickAndMortyAPI) GetUserByID(id int) (*domain.User, error) {
+func (c *RickAndMortyAPI) GetRandomAvatarByID(id int) (*domain.User, error) {
 	url := fmt.Sprintf("%s/character/%d", baseURL, id)
 	resp, err := c.client.Get(url)
 	if err != nil {
@@ -104,7 +104,7 @@ func (c *RickAndMortyAPI) GetUserByID(id int) (*domain.User, error) {
 	}
 
 	return &domain.User{
-		Name:      data.Name,
-		AvatarURL: data.Image,
+		Username: data.Name,
+		ImageURL: data.Image,
 	}, nil
 }

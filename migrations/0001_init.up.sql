@@ -1,23 +1,51 @@
-CREATE TABLE IF NOT EXISTS posts (
-    id TEXT PRIMARY KEY,
-    title TEXT NOT NULL,
-    content TEXT NOT NULL,
+-- Создание таблицы Client (переименованная User)
+CREATE TABLE Client (
+    user_id UUID PRIMARY KEY,
+    username TEXT NOT NULL,
     image_url TEXT,
-    user_name TEXT NOT NULL,
-    user_avatar TEXT NOT NULL,
-    created_at TIMESTAMP NOT NULL
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS comments (
-    id TEXT PRIMARY KEY,
-    post_id TEXT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
-    parent_id TEXT REFERENCES comments(id) ON DELETE CASCADE,
+-- Создание таблицы Session
+CREATE TABLE Session (
+    session_id TEXT PRIMARY KEY,
+    user_id UUID NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES Client(user_id) ON DELETE CASCADE
+);
+
+-- Создание таблицы Post
+CREATE TABLE Post (
+    post_id UUID PRIMARY KEY,
+    title TEXT NOT NULL,
+    content TEXT,
+    image_url TEXT,
+    is_deleted BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    user_id UUID NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES Client(user_id) ON DELETE CASCADE
+);
+
+-- Создание таблицы Comment с древовидной структурой
+CREATE TABLE Comment (
+    comment_id UUID PRIMARY KEY,
     content TEXT NOT NULL,
-    user_name TEXT NOT NULL,
-    user_avatar TEXT NOT NULL,
-    created_at TIMESTAMP NOT NULL
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    avatar TEXT,
+    post_id UUID NOT NULL,
+    parent_comment_id UUID ,
+    user_id UUID NOT NULL,
+    FOREIGN KEY (post_id) REFERENCES Post(post_id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_comment_id) REFERENCES Comment(comment_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES Client(user_id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id);
-CREATE INDEX IF NOT EXISTS idx_comments_parent_id ON comments(parent_id);
-CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at);
+-- Добавление индексов для оптимизации
+CREATE INDEX idx_session_user ON Session(user_id);
+CREATE INDEX idx_post_user ON Post(user_id);
+CREATE INDEX idx_comment_post ON Comment(post_id);
+CREATE INDEX idx_comment_parent ON Comment(parent_comment_id);
+CREATE INDEX idx_comment_user ON Comment(user_id);
+CREATE INDEX idx_post_created ON Post(created_at);
+CREATE INDEX idx_comment_created ON Comment(created_at);

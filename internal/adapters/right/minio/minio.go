@@ -5,162 +5,103 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log/slog"
-	"net/url"
+	"mime/multipart"
+	"net/http"
+	"path/filepath"
 	"time"
 
-	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/minio/minio-go/v7"
 )
 
-type Config struct {
-	Endpoint string
-	User     string
-	Password string
-	UseSSL   bool
+type ImageStorage struct {
+	client     *minio.Client
+	bucketName string
 }
 
-type MinIOClient struct {
-	client   *minio.Client
-	endpoint string
-}
-
-func DefaultConfig() Config {
-	return Config{
-		Endpoint: "localhost:9000",
-		User:     "minioadmin",
-		Password: "minioadmin",
-		UseSSL:   false,
-	}
-}
-
-func New(cfg Config) (*MinIOClient, error) {
-	client, err := minio.New(cfg.Endpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(cfg.User, cfg.Password, ""),
-		Secure: cfg.UseSSL,
-	})
+func NewImageStorage(endpoint, accessKey, secretKey, bucketName string, useSSL bool) (*ImageStorage, error) {
+	client, err := connectMinioWithRetry(endpoint, accessKey, secretKey, useSSL, 10, 2*time.Second)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create MinIO client: %w", err)
-	}
-
-	m := &MinIOClient{
-		client:   client,
-		endpoint: cfg.Endpoint,
-	}
-
-	// Проверка подключения
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if _, err := client.ListBuckets(ctx); err != nil {
 		return nil, fmt.Errorf("failed to connect to MinIO: %w", err)
 	}
 
-	// Создаем необходимые бакеты
-	for _, bucket := range []string{"images", "thumbnails"} {
-		if err := m.CreateBucket(ctx, bucket); err != nil {
-			return nil, fmt.Errorf("failed to initialize bucket %s: %w", bucket, err)
-		}
-
-		// Настраиваем политику доступа
-		policy := `{
-			"Version": "2012-10-17",
-			"Statement": [{
-				"Effect": "Allow",
-				"Principal": {"AWS": ["*"]},
-				"Action": ["s3:GetObject"],
-				"Resource": ["arn:aws:s3:::%s/*"]
-			}]
-		}`
-
-		if err := client.SetBucketPolicy(ctx, bucket, fmt.Sprintf(policy, bucket)); err != nil {
-			slog.Warn("Failed to set bucket policy", "bucket", bucket, "error", err)
-		}
+	if err := ensureBucketExists(context.Background(), client, bucketName); err != nil {
+		return nil, fmt.Errorf("bucket check/create failed: %w", err)
 	}
 
-	return m, nil
+	return &ImageStorage{
+		client:     client,
+		bucketName: bucketName,
+	}, nil
 }
 
-func (m *MinIOClient) CreateBucket(ctx context.Context, bucketName string) error {
-	exists, err := m.client.BucketExists(ctx, bucketName)
+func connectMinioWithRetry(endpoint, accessKey, secretKey string, useSSL bool, retries int, delay time.Duration) (*minio.Client, error) {
+	var client *minio.Client
+	var err error
+
+	for i := 0; i < retries; i++ {
+		client, err = minio.New(endpoint, &minio.Options{
+			Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
+			Secure: useSSL,
+		})
+		if err == nil {
+			if _, err = client.ListBuckets(context.Background()); err == nil {
+				return client, nil
+			}
+		}
+		time.Sleep(delay)
+	}
+	return nil, fmt.Errorf("could not connect to MinIO after %d retries: %w", retries, err)
+}
+
+func ensureBucketExists(ctx context.Context, client *minio.Client, bucketName string) error {
+	exists, err := client.BucketExists(ctx, bucketName)
 	if err != nil {
-		return fmt.Errorf("bucket check failed: %w", err)
+		return fmt.Errorf("error checking bucket existence: %w", err)
 	}
 	if !exists {
-		if err := m.client.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{}); err != nil {
-			return fmt.Errorf("bucket creation failed: %w", err)
+		if err := client.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{}); err != nil {
+			return fmt.Errorf("error creating bucket: %w", err)
 		}
 	}
 	return nil
 }
 
-func (m *MinIOClient) UploadImage(ctx context.Context, bucket, objectName string, data []byte, contentType string) (string, error) {
-	reader := bytes.NewReader(data)
-	_, err := m.client.PutObject(ctx, bucket, objectName, reader, int64(len(data)), minio.PutObjectOptions{
-		ContentType: contentType,
+func (u *ImageStorage) UploadImage(ctx context.Context, file multipart.File, fileHeader *multipart.FileHeader) (string, error) {
+	defer file.Close()
+
+	extension := filepath.Ext(fileHeader.Filename)
+	objectName := fmt.Sprintf("post_%d%s", time.Now().UnixNano(), extension)
+
+	_, err := u.client.PutObject(ctx, u.bucketName, objectName, file, fileHeader.Size, minio.PutObjectOptions{
+		ContentType: fileHeader.Header.Get("Content-Type"),
 	})
 	if err != nil {
-		return "", fmt.Errorf("upload failed: %w", err)
+		return "", fmt.Errorf("failed to upload file to MinIO: %w", err)
 	}
 
-	slog.Info("Image uploaded successfully",
-		"bucket", bucket,
-		"object", objectName,
-		"size", len(data),
-	)
-
-	return m.GetObjectURL(ctx, bucket, objectName)
+	return objectName, nil
 }
 
-func (m *MinIOClient) DownloadObject(ctx context.Context, bucket, objectName string) ([]byte, error) {
-	object, err := m.client.GetObject(ctx, bucket, objectName, minio.GetObjectOptions{})
+func (u *ImageStorage) GetImage(ctx context.Context, objectName string) ([]byte, string, error) {
+	object, err := u.client.GetObject(ctx, u.bucketName, objectName, minio.GetObjectOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("download failed: %w", err)
+		return nil, "", fmt.Errorf("failed to get object from MinIO: %w", err)
 	}
 	defer object.Close()
 
-	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, object); err != nil {
-		return nil, fmt.Errorf("failed to read object: %w", err)
+	buffer := new(bytes.Buffer)
+	header := make([]byte, 512)
+	n, err := object.Read(header)
+	if err != nil && err != io.EOF {
+		return nil, "", fmt.Errorf("failed to read object header: %w", err)
 	}
-	return buf.Bytes(), nil
-}
+	buffer.Write(header[:n])
 
-func (m *MinIOClient) DeleteObject(ctx context.Context, bucket, objectName string) error {
-	if err := m.client.RemoveObject(ctx, bucket, objectName, minio.RemoveObjectOptions{}); err != nil {
-		return fmt.Errorf("delete failed: %w", err)
-	}
-	return nil
-}
-
-func (m *MinIOClient) ListObjects(ctx context.Context, bucket string) ([]string, error) {
-	var objectURLs []string
-
-	objectCh := m.client.ListObjects(ctx, bucket, minio.ListObjectsOptions{})
-	for object := range objectCh {
-		if object.Err != nil {
-			slog.Warn("Error listing object", "error", object.Err)
-			continue
-		}
-
-		url, err := m.GetObjectURL(ctx, bucket, object.Key)
-		if err != nil {
-			slog.Warn("Error generating URL", "error", err)
-			continue
-		}
-
-		objectURLs = append(objectURLs, url)
+	if _, err := io.Copy(buffer, object); err != nil {
+		return nil, "", fmt.Errorf("failed to read full object: %w", err)
 	}
 
-	return objectURLs, nil
-}
-
-func (m *MinIOClient) GetObjectURL(ctx context.Context, bucket, objectName string) (string, error) {
-	reqParams := make(url.Values)
-	// Генерируем URL с временным токеном (действителен 24 часа)
-	presignedURL, err := m.client.PresignedGetObject(ctx, bucket, objectName, 24*time.Hour, reqParams)
-	if err != nil {
-		return "", fmt.Errorf("failed to generate presigned URL: %w", err)
-	}
-	return presignedURL.String(), nil
+	contentType := http.DetectContentType(header[:n])
+	return buffer.Bytes(), contentType, nil
 }

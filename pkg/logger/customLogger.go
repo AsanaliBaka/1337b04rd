@@ -17,20 +17,20 @@ type CustomLogger struct {
 func NewCustomLogger() (*CustomLogger, error) {
 	flags := log.Ldate | log.Ltime | log.Lshortfile
 
-	err := os.MkdirAll("../logs", 0o755)
+	err := os.MkdirAll("/logs", 0o755)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create logs directory: %w", err)
 	}
 
-	fileInfo, err := os.OpenFile("../logs/info.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o666)
+	fileInfo, err := os.OpenFile("/logs/info.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o666)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open info log file: %w", err)
 	}
-	fileWarn, err := os.OpenFile("../logs/warning.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o666)
+	fileWarn, err := os.OpenFile("/logs/warning.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o666)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open warning log file: %w", err)
 	}
-	fileErr, err := os.OpenFile("../logs/error.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o666)
+	fileErr, err := os.OpenFile("/logs/error.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o666)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open error log file: %w", err)
 	}
